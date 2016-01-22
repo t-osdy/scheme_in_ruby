@@ -11,3 +11,7 @@ def _eval(exp)
     apply(fun, args)
   end
 end
+
+def list?(exp)
+  exp.is_a?(Array)
+end
