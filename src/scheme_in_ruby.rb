@@ -44,8 +44,8 @@ def eval_list(exp, env)
   exp.map{|e| _eval(e, env)}
 end
 
-def list?(exp)
-  exp.is_a?(Array)
+def list?(*list)
+  list
 end
 
 def lookup_primitive_fun(exp)
@@ -94,6 +94,68 @@ end
 def apply_primitive_fun(fun, args)
   fun_val = fun[1]
   fun_val.call(*args)
+end
+
+def eval_define(exp, env)
+  if define_with_parameter?(exp)
+    var, val = define_with_parameter_var_val(exp)
+  else
+    var, val = define_var_val(exp)
+  end
+
+  var_ref = lookup_var_ref(var, env)
+
+  if var_ref != nil
+    var_ref[var] = _eval(val,env)
+  else
+    extend_env!([var], [_eval(val, env)], env)
+  end
+  nil
+end
+
+def eval_define(exp, env)
+  if define_with_parameter?(exp)
+    var, val = define_with_parameter_var_val(exp)
+  else
+    var, val = define_var_val(exp)
+  end
+  var_ref = lookup_var_ref(var, env)
+  if var_ref != nil
+    var_ref[var] = _eval(val, env)
+  else
+    extend_env!([var], [_eval(val, env)], env)
+  end
+  nil
+end
+
+def extend_env!(parameters, args, env)
+  alist = parameters.zip(args)
+  h = Hash.new
+  alist.each{ |k, v| h[k] = v }
+  env.unshift(h)
+end
+
+def define_with_parameter?(exp)
+  list?(exp[1])
+end
+
+def define_with_parameter_var_val(exp)
+  var = car(exp[1])
+  parameters, body = cdr(exp[1]), exp[2]
+  val = [:lambda, parameters, body]
+  [var, val]
+end
+
+def define_var_val(exp)
+  [exp[1], exp[2]]
+end
+
+def lookup_var_ref(var, env)
+  env.find{|alist| alist.key?(var)}
+end
+
+def define?(exp)
+  exp[0] == :define
 end
 
 ### environment ###
@@ -193,9 +255,31 @@ def letrec?(exp)
   exp[0] == :letrec
 end
 
+## list ###
+def null?(list)
+  list == []
+end
+
+$list_env = {
+  :nil    => [],
+  :null?  => [:prim, lambda{|list| null?(list)}],
+  :cons   => [:prim, lambda{|a, b| cons(a, b)}],
+  :car    => [:prim, lambda{|list| car(list)}],
+  :cdr    => [:prim, lambda{|list| cdr(list)}],
+  :list   => [:prim, lambda{|*list| list(*list)}],
+}
+
+def cons(a, b)
+  if not list?(b)
+    raise "sorry, we haven't implemented yet..."
+  else
+    [a] + b
+  end
+end
+
 ### output ###
 $boolean_env ={:true => true, :false => false}
-$global_env = [$primitive_fun_env, $boolean_env]
+$global_env = [$list_env, $primitive_fun_env, $boolean_env]
 exp = [:letrec, [[:fact, [:lambda, [:n], [:if, [:<, :n, 1], 1, [:*, :n, [:fact, [:-, :n, 1]]]]]]], [:fact, 3]]
 puts _eval(exp, $global_env)
 #puts _eval([:+, [:+, 1, 2], 3])
