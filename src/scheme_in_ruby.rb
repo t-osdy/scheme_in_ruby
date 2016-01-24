@@ -18,7 +18,10 @@ def _eval(exp, env)
 end
 
 def special_form?(exp)
-  lambda?(exp) or let?(exp)
+  lambda?(exp) or
+  let?(exp)    or
+  letrec?(exp) or
+  if?(exp)     or
 end
 
 def lambda?(exp)
@@ -30,6 +33,10 @@ def eval_special_form(exp, env)
     eval_lambda(exp, env)
   elsif let?(exp)
     eval_let(exp, env)
+  elsif letrec?(exp)
+    eval_letrec(exp, env)
+  elsif if?(exp)
+    eval_if(exp, env)
   end
 end
 
@@ -48,7 +55,12 @@ end
 $primitive_fun_env = {
   :+ => [:prim, lambda{|x, y| x + y}],
   :- => [:prim, lambda{|x, y| x - y}],
-  :* => [:prim, lambda{|x, y| x * y}]
+  :* => [:prim, lambda{|x, y| x * y}],
+  :> => [:prim, lambda{|x, y| x > y}],
+  :>= => [:prim, lambda{|x, y| x >= y}],
+  :<  => [:prim, lambda{|x, y| x <  y}],
+  :<= => [:prim, lambda{|x, y| x <= y}],
+  :== => [:prim, lambda{|x, y| x == y}],
 }
 
 def car(list)
@@ -135,9 +147,27 @@ def closure_to_parameters_body_env(closure)
   [closure[1], closure[2], closure[3]]
 end
 
+### if ###
+def eval_if(exp, env)
+  cond, true_clause, false_clause = if_to_cond_true_false(exp)
+  if _eval(cond, env)
+    _eval(true_cause, env)
+  else
+    _eval(false_clause, env)
+  end
+end
+
+def if_to_cond_true_false(exp)
+  [exp[1], exp[2], exp[3]]
+end
+
+def if?(exp)
+  exp[0] == :if
+end
 
 ### output ###
-$global_env = [$primitive_fun_env]
+$boolean_env ={:true => true, :false => false}
+$global_env = [$primitive_fun_env, $boolean_env]
 exp = [[:lambda, [:x, :y], [:+, :x, :y]], 3, 2]
 puts _eval(exp, $global_env)
 #puts _eval([:+, [:+, 1, 2], 3])
