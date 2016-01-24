@@ -21,7 +21,10 @@ def special_form?(exp)
   lambda?(exp) or
   let?(exp)    or
   letrec?(exp) or
-  if?(exp)
+  if?(exp)     or
+  cond?(exp)   or
+  define?(exp) or
+  quote?(exp)
 end
 
 def lambda?(exp)
@@ -37,6 +40,12 @@ def eval_special_form(exp, env)
     eval_letrec(exp, env)
   elsif if?(exp)
     eval_if(exp, env)
+  elsif cond?(exp)
+    eval_cond(exp, env)
+  elsif define?(exp)
+    eval_define(exp, env)
+  elsif quote?(exp)
+    eval_quote(exp, env)
   end
 end
 
@@ -44,8 +53,12 @@ def eval_list(exp, env)
   exp.map{|e| _eval(e, env)}
 end
 
-def list?(*list)
+def list(*list)
   list
+end
+
+def list?(exp)
+  exp.is_a?(Array)
 end
 
 def lookup_primitive_fun(exp)
@@ -261,12 +274,12 @@ def null?(list)
 end
 
 $list_env = {
-  :nil    => [],
-  :null?  => [:prim, lambda{|list| null?(list)}],
-  :cons   => [:prim, lambda{|a, b| cons(a, b)}],
-  :car    => [:prim, lambda{|list| car(list)}],
-  :cdr    => [:prim, lambda{|list| cdr(list)}],
-  :list   => [:prim, lambda{|*list| list(*list)}],
+  :nil   => [],
+  :null? => [:prim, lambda{|list| null?(list)}],
+  :cons  => [:prim, lambda{|a, b| cons(a, b)}],
+  :car   => [:prim, lambda{|list| car(list)}],
+  :cdr   => [:prim, lambda{|list| cdr(list)}],
+  :list  => [:prim, lambda{|*list| list(*list)}],
 }
 
 def cons(a, b)
@@ -300,13 +313,85 @@ def cond?(exp)
   exp[0] == :cond
 end
 
+### parser ###
+def parse(exp)
+  program = exp.strip().
+  gsub(/[a-zA-Z\+\-\*><=][0-9a-zA-Z\+\-=!*]*/, ':\\0').
+  gsub(/\s+/, ', ').
+  gsub(/\(/, '[').
+  gsub(/\)/, ']')
+  eval(program)
+end
 
+### quote ###
+def eval_quote(exp, env)
+  car(cdr(exp))
+end
 
+def quote?(exp)
+  exp[0] == :quote
+end
+
+### repl ###
+def repl
+  prompt = '>>> '
+  second_prompt = '> '
+  while true
+    print prompt
+    line = gets or return
+    while line.count('(') > line.count(')')
+      print second_prompt
+      next_line = gets or return
+      line += next_line
+    end
+    redo if line =~ /\A\s*\z/m
+    begin
+      val = _eval(parse(line), $global_env)
+    rescue Exception => e
+      puts e.to_s
+      redo
+    end
+    puts pp(val)
+  end
+end
+
+def closure?(exp)
+  exp[0] == :closure
+end
+
+def pp(exp)
+  if exp.is_a?(Symbol) or num?(exp)
+    exp.to_s
+  elsif exp == nil
+    'nil'
+  elsif exp.is_a?(Array) and closure?(exp)
+    parameter, body, env = exp[1], exp[2], exp[3]
+    "(closure #{pp(parameter)} #{pp(body)})"
+  elsif exp.is_a?(Array) and lambda?(exp)
+    parameters, body = exp[1], exp[2]
+    "(lambda #{pp(parameters)} #{pp(body)})"
+  elsif exp.is_a?(Hash)
+    if exp == $primitive_fun_env
+      '*prinmitive_fun_env*'
+    elsif exp == $boolean_env
+      '*boolean_env*'
+    elsif exp == $list_env
+      '*list_env*'
+    else
+      '{' + exp.map{|k, v| pp(k) + ':' + pp(v)}.join(', ') + '}'
+    end
+  elsif exp.is_a?(Array)
+    '(' + exp.map{|e| pp(e)}.join(', ') + ')'
+  else
+    exp.to_s
+  end
+end
 
 
 ### output ###
 $boolean_env ={:true => true, :false => false}
 $global_env = [$list_env, $primitive_fun_env, $boolean_env]
-exp = [:letrec, [[:fact, [:lambda, [:n], [:if, [:<, :n, 1], 1, [:*, :n, [:fact, [:-, :n, 1]]]]]]], [:fact, 3]]
-puts _eval(exp, $global_env)
+#exp = [:letrec, [[:fact, [:lambda, [:n], [:if, [:<, :n, 1], 1, [:*, :n, [:fact, [:-, :n, 1]]]]]]], [:fact, 3]]
+#puts _eval(exp, $global_env)
 #puts _eval([:+, [:+, 1, 2], 3])
+#puts repl
