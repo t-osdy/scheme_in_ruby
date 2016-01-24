@@ -277,6 +277,33 @@ def cons(a, b)
   end
 end
 
+### cond ###
+def eval_cond(exp, env)
+  if_exp = cond_to_if(cdr(exp))
+  eval_if(if_exp, env)
+end
+
+def cond_to_if(cond_exp)
+  if cond_exp == []
+    ''
+  else
+    e = car(cond_exp)
+    p, c = e[0], e[1]
+    if p == :else
+      p = :true
+    end
+    [:if, p, c, cond_to_if(cdr(cond_exp))]
+  end
+end
+
+def cond?(exp)
+  exp[0] == :cond
+end
+
+
+
+
+
 ### output ###
 $boolean_env ={:true => true, :false => false}
 $global_env = [$list_env, $primitive_fun_env, $boolean_env]
