@@ -115,23 +115,6 @@ def eval_define(exp, env)
   else
     var, val = define_var_val(exp)
   end
-
-  var_ref = lookup_var_ref(var, env)
-
-  if var_ref != nil
-    var_ref[var] = _eval(val,env)
-  else
-    extend_env!([var], [_eval(val, env)], env)
-  end
-  nil
-end
-
-def eval_define(exp, env)
-  if define_with_parameter?(exp)
-    var, val = define_with_parameter_var_val(exp)
-  else
-    var, val = define_var_val(exp)
-  end
   var_ref = lookup_var_ref(var, env)
   if var_ref != nil
     var_ref[var] = _eval(val, env)
@@ -139,12 +122,12 @@ def eval_define(exp, env)
     extend_env!([var], [_eval(val, env)], env)
   end
   nil
-end
+ end
 
 def extend_env!(parameters, args, env)
   alist = parameters.zip(args)
   h = Hash.new
-  alist.each{ |k, v| h[k] = v }
+  alist.each { |k, v| h[k] = v }
   env.unshift(h)
 end
 
@@ -316,10 +299,10 @@ end
 ### parser ###
 def parse(exp)
   program = exp.strip().
-  gsub(/[a-zA-Z\+\-\*><=][0-9a-zA-Z\+\-=!*]*/, ':\\0').
-  gsub(/\s+/, ', ').
-  gsub(/\(/, '[').
-  gsub(/\)/, ']')
+    gsub(/[a-zA-Z\+\-\*><=][0-9a-zA-Z\+\-=!*]*/, ':\\0').
+    gsub(/\s+/, ', ').
+    gsub(/\(/, '[').
+    gsub(/\)/, ']')
   eval(program)
 end
 
@@ -387,11 +370,8 @@ def pp(exp)
   end
 end
 
-
 ### output ###
 $boolean_env ={:true => true, :false => false}
 $global_env = [$list_env, $primitive_fun_env, $boolean_env]
-#exp = [:letrec, [[:fact, [:lambda, [:n], [:if, [:<, :n, 1], 1, [:*, :n, [:fact, [:-, :n, 1]]]]]]], [:fact, 3]]
-#puts _eval(exp, $global_env)
-#puts _eval([:+, [:+, 1, 2], 3])
-#puts repl
+exp = _eval(parse('(define (length list) (if  (null? list) 0 (+ (length (cdr list)) 1)))'), $global_env)
+puts _eval(parse('(length (list 1 2 3))'), $global_env)
