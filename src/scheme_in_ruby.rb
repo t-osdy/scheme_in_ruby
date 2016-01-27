@@ -20,6 +20,10 @@ $list_env = {
   :list  => [:prim, lambda{|*list| list(*list)}],
 }
 
+def lookup_primitive_fun(exp)
+  $primitive_fun_env[exp]
+end
+
 $global_env = [$list_env, $primitive_fun_env, $boolean_env]
 
 ## list ###
@@ -163,12 +167,12 @@ end
 
 def special_form?(exp)
   lambda?(exp) or
-  let?(exp)    or
-  letrec?(exp) or
-  if?(exp)     or
-  cond?(exp)   or
-  define?(exp) or
-  quote?(exp)
+    let?(exp) or
+    letrec?(exp) or
+    if?(exp) or
+    cond?(exp) or
+    define?(exp) or
+    quote?(exp)
 end
 
 def quote?(exp)
@@ -364,9 +368,10 @@ def repl
 end
 
 
-def lookup_primitive_fun(exp)
-  $primitive_fun_env[exp]
+if $0 == __FILE__
+  repl
 end
+
 ### output ###
 #exp = _eval(parse('(define (length list) (if  (null? list) 0 (+ (length (cdr list)) 1)))'), $global_env)
 #puts _eval(parse('(length (list 1 2 3))'), $global_env)
